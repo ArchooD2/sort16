@@ -11,6 +11,7 @@ records_file = os.path.join(script_dir, "records.json")
 root = tk.Tk()
 root.title("Sort16")
 root.geometry("1920x1080")
+root.configure(bg="lightblue")  # can also use hex codes like "#ffcccc"
 
 number_var = tk.IntVar(value=8)
 template = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -36,10 +37,10 @@ except json.JSONDecodeError:
 
 
 # --- Labels ---
-label1 = tk.Label(root, text='Select character number (8-36): ', font=('calibre', 10, 'bold'))
+label1 = tk.Label(root, text='Select character number (8-36): ', bg="lightblue", font=('calibre', 10, 'bold'))
 label1.pack()
 
-label2 = tk.Entry(root, textvariable=number_var, font=('calibre', 10, 'normal'))
+label2 = tk.Entry(root, textvariable=number_var,font=('calibre', 10, 'normal'))
 label2.pack()
 
 label3 = tk.Label(root, text="", font=('calibre', 36, 'bold'))
@@ -211,12 +212,12 @@ button2 = tk.Button(root, text="Go to main menu", command=go_to_menu)
 button2.pack_forget()
 
 record_labels = []
-records_frame = tk.Frame(root)
+records_frame = tk.Frame(root, bg="lightblue")
 records_frame.pack(side="left")
-bests = tk.Label(records_frame, text="Best times (s):", font=('calibre', 14, 'bold'))
+bests = tk.Label(records_frame, text="Best times (s):", bg="lightblue", font=('calibre', 14, 'bold'))
 bests.pack()
 for i in range(8, 37):
-    lbl = tk.Label(records_frame, text=f"{i}: -", font=('calibre', 12), anchor="w", width=14)
+    lbl = tk.Label(records_frame, text=f"{i}: -", font=('calibre', 12), bg="lightblue", anchor="w", width=14)
     lbl.pack()
     record_labels.append(lbl)
 
