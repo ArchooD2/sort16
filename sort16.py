@@ -4,14 +4,17 @@ import random
 import math
 import json
 import os
+import cryptography
+from cryptography.fernet import Fernet, InvalidToken
+import stat
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-records_file = os.path.join(script_dir, "records.json")
+KEY_FILE = os.path.join(script_dir, "sort16.key")
+RECORDS_BIN = os.path.join(script_dir, "records.bin")
 # --- Setup ---
 root = tk.Tk()
 root.title("Sort16")
 root.geometry("1920x1080")
-root.configure(bg="lightblue")  # can also use hex codes like "#ffcccc"
 
 number_var = tk.IntVar(value=8)
 template = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -23,24 +26,77 @@ button_pressed = False
 game_won = False
 records = [None] * 29  # lengths 8..36
 
-try:
-    with open(records_file, "r") as f:
-        data = json.load(f)
-        for key, value in data.items():
+def generate_and_store_key(path=KEY_FILE):
+    key = Fernet.generate_key()
+    # write key file with restrictive permissions
+    with open(path, "wb") as f:
+        f.write(key)
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        # windows will ignore chmod; that's fine
+        pass
+    return key
+
+def load_key(path=KEY_FILE):
+    if not os.path.exists(path):
+        return generate_and_store_key(path)
+    with open(path, "rb") as f:
+        return f.read().strip()
+
+def load_encrypted_records(path=RECORDS_BIN):
+    if not os.path.exists(path):
+        return {}
+    try:
+        key = load_key()
+        f = Fernet(key)
+        token = open(path, "rb").read()
+        payload = f.decrypt(token)  # raises InvalidToken if tampered
+        data = json.loads(payload.decode("utf-8"))
+        if not isinstance(data, dict):
+            return {}
+        return data
+    except InvalidToken:
+        print("Warning: records file failed authentication (possible tampering). Ignoring file.")
+        return {}
+    except Exception as e:
+        print("Warning: couldn't load records:", e)
+        return {}
+
+def save_encrypted_records(records_dict, path=RECORDS_BIN):
+    try:
+        key = load_key()
+        f = Fernet(key)
+        payload = json.dumps(records_dict, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        token = f.encrypt(payload)
+        with open(path, "wb") as fh:
+            fh.write(token)
+        try:
+            os.chmod(path, 0o600)
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        print("Error saving encrypted records:", e)
+        return False
+
+# load at startup (fill `records` list from decrypted dict if possible)
+_loaded = load_encrypted_records()
+if _loaded:
+    for key, value in _loaded.items():
+        try:
             idx = int(key) - 8
             if 0 <= idx < len(records):
-                records[idx] = value
-except FileNotFoundError:
-    pass
-except json.JSONDecodeError:
-    print("Warning: JSON file is invalid. Starting with empty records.")
+                records[idx] = float(value)
+        except Exception:
+            pass
 
 
 # --- Labels ---
-label1 = tk.Label(root, text='Select character number (8-36): ', bg="lightblue", font=('calibre', 10, 'bold'))
+label1 = tk.Label(root, text='Select character number (8-36): ', font=('calibre', 10, 'bold'))
 label1.pack()
 
-label2 = tk.Entry(root, textvariable=number_var,font=('calibre', 10, 'normal'))
+label2 = tk.Entry(root, textvariable=number_var, font=('calibre', 10, 'normal'))
 label2.pack()
 
 label3 = tk.Label(root, text="", font=('calibre', 36, 'bold'))
@@ -190,8 +246,9 @@ def key_pressed(event):
         if records[idx] is None or czas < records[idx]:
             records[idx] = czas
         records_dict = {str(i + 8): records[i] for i in range(len(records)) if records[i] is not None}
-        with open(records_file, "w") as f:
-            json.dump(records_dict, f, indent=4)
+        saved = save_encrypted_records(records_dict)
+        if not saved:
+            print("Warning: failed to save encrypted records.")
         record_labels[idx+1].config(text=f"{chosen_number}: {records[idx]}s")
         label1.config(
             text=f"You win!\nTime: {czas}s\nCurrent best: {records[idx]}s",
@@ -212,12 +269,12 @@ button2 = tk.Button(root, text="Go to main menu", command=go_to_menu)
 button2.pack_forget()
 
 record_labels = []
-records_frame = tk.Frame(root, bg="lightblue")
+records_frame = tk.Frame(root)
 records_frame.pack(side="left")
-bests = tk.Label(records_frame, text="Best times (s):", bg="lightblue", font=('calibre', 14, 'bold'))
+bests = tk.Label(records_frame, text="Best times (s):", font=('calibre', 14, 'bold'))
 bests.pack()
 for i in range(8, 37):
-    lbl = tk.Label(records_frame, text=f"{i}: -", font=('calibre', 12), bg="lightblue", anchor="w", width=14)
+    lbl = tk.Label(records_frame, text=f"{i}: -", font=('calibre', 12), anchor="w", width=14)
     lbl.pack()
     record_labels.append(lbl)
 
