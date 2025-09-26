@@ -22,21 +22,14 @@
 
 ---
 
-## Installation
-
-1. Make sure you have **Python 3.x** installed.  
-2. Install Tkinter (usually included with Python).  
-3. Install cryptography.
-
-No additional packages are required.
-
----
-
 ## How to Run
 
+0. Make sure you have **Python 3.x** installed.  
 1. Download or clone the repository.  
 2. Navigate to the folder containing `sort16.py` (or your Python script).  
-3. Run the game:
+3. Run `pip install -r requirements.txt`
+4. Run the game:
 
 ```bash
 python sort16.py
+```
