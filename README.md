@@ -26,6 +26,7 @@
 
 1. Make sure you have **Python 3.x** installed.  
 2. Install Tkinter (usually included with Python).  
+3. Install cryptography.
 
 No additional packages are required.
 
